@@ -1,0 +1,226 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Correlation Method Example / Sanity Check</title><meta name="generator" content="MATLAB 7.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2014-04-06"><meta name="DC.source" content="v3_sanity_check.m"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>Correlation Method Example / Sanity Check</h1><!--introduction--><div><ul><li>Justin Pearson</li><li>ECE 147C</li><li>2014.04.06</li></ul></div><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#2">Compute intermediate vars</a></li><li><a href="#4">Correlation method</a></li><li><a href="#6">Sanity check: Gain</a></li><li><a href="#9">Sanity check: Phase</a></li></ul></div><p>You should run ece147c_lab0_v3.mdl (in the same dir as this file) before running this file. The simulation produces variables: encoders, motor_cmd, trigger_signal.</p><pre class="codeinput">assert( exist(<span class="string">'encoders'</span>,<span class="string">'var'</span>) &amp;&amp; exist(<span class="string">'motor_cmd'</span>,<span class="string">'var'</span>) &amp;&amp; exist(<span class="string">'trigger_signal'</span>,<span class="string">'var'</span>) )
+</pre><h2>Compute intermediate vars<a name="2"></a></h2><pre class="codeinput">u     = motor_cmd.signals.values(:,1);
+y     = encoders.signals.values(:,2);
+T     = length(y); <span class="comment">% number of samples</span>
+Omega = 2*pi*0.001; <span class="comment">% sine block into motor_cmd has freq 2pi rad/sec &amp; 0.001 sec/sample; Omega is in rad/sample</span>
+a     = 2; <span class="comment">% amplitude of the motor_cmd sine wave block</span>
+</pre><p>Your input u should be a cosine, ie, its first element should be its amplitude.</p><pre class="codeinput">assert( abs(u(1)-a) &lt; 1e-3 ) <span class="comment">% roughly</span>
+</pre><h2>Correlation method<a name="4"></a></h2><p>From the notes, for a fixed <img src="v3_sanity_check_eq78544.png" alt="$\Omega \in [0,\pi]$"> and given data <img src="v3_sanity_check_eq17960.png" alt="$y(k) \in R, k=1,\ldots,T$">, the relationship between <img src="v3_sanity_check_eq44020.png" alt="$y$"> and the transfer function <img src="v3_sanity_check_eq67619.png" alt="$H$"> is</p><p><img src="v3_sanity_check_eq91660.png" alt="$$K_\Omega := \frac{1}{T} \sum_{k=1}^T e^{-j \Omega k} y(k) = \frac{\alpha}{2} H(e^{j \Omega})$$"></p><pre class="codeinput">x=exp(-i*Omega*[1:T]);
+K = 1/T*(x*y)
+H = K*2/a
+</pre><pre class="codeoutput">
+K =
+
+ -4.6560e+002 -4.9713e+002i
+
+
+H =
+
+ -4.6560e+002 -4.9713e+002i
+
+</pre><p>That value of <img src="v3_sanity_check_eq67619.png" alt="$H$"> is one point on the bode plot. It has magnitude and phase</p><pre class="codeinput">abs(H) <span class="comment">% gain (unitless)</span>
+angle(H) <span class="comment">% phase shift (rad)</span>
+</pre><pre class="codeoutput">
+ans =
+
+  681.1236
+
+
+ans =
+
+   -2.3235
+
+</pre><h2>Sanity check: Gain<a name="6"></a></h2><p>Estimate how much the plant amplified u to y, and compare it to the gain at this frequency <img src="v3_sanity_check_eq94012.png" alt="$H(e^{j \Omega})$">.</p><pre class="codeinput">figure
+subplot(2,1,1); plot(u)
+subplot(2,1,2); plot(y)
+</pre><img vspace="5" hspace="5" src="v3_sanity_check_01.png" alt=""> <p>Looks like about a swing of 4 for u and 2900 for y, hence:</p><pre class="codeinput">2900/4
+</pre><pre class="codeoutput">
+ans =
+
+   725
+
+</pre><p>Pretty close to abs(H).</p><h2>Sanity check: Phase<a name="9"></a></h2><p>Looking at the plot, it looks like u hits a peak at sample 8000 and y hits a peak at 8350. Hence the phase should something like</p><pre class="codeinput">- 350 * Omega <span class="comment">% 350 samp * Omega rad/samp</span>
+</pre><pre class="codeoutput">
+ans =
+
+   -2.1991
+
+</pre><p>Pretty close to angle(H).</p><p>Could we have done better by throwing away the initial transient? Be careful to throw away starting at an index where u is at its peak (still a cosine)!</p><pre class="codeinput">y = y(3000:end);
+T = length(y);
+x=exp(-i*Omega*[1:T]);
+K = 1/T*(x*y)
+H = K*2/a
+abs(H)
+angle(H)
+</pre><pre class="codeoutput">
+K =
+
+ -4.7915e+002 -4.9374e+002i
+
+
+H =
+
+ -4.7915e+002 -4.9374e+002i
+
+
+ans =
+
+  688.0183
+
+
+ans =
+
+   -2.3412
+
+</pre><p>Not a big improvement. Our initial test was pretty long. If it had been shorter, we might've gained more from tossing the initial data.</p><p class="footer"><br>
+      Published with MATLAB&reg; 7.13<br></p></div><!--
+##### SOURCE BEGIN #####
+%% Correlation Method Example / Sanity Check
+% * Justin Pearson
+% * ECE 147C
+% * 2014.04.06
+
+%%
+% You should run ece147c_lab0_v3.mdl (in the same dir as this file) before
+% running this file. The simulation produces variables: encoders,
+% motor_cmd, trigger_signal. 
+
+assert( exist('encoders','var') && exist('motor_cmd','var') && exist('trigger_signal','var') )
+
+%% Compute intermediate vars
+
+u     = motor_cmd.signals.values(:,1);
+y     = encoders.signals.values(:,2);
+T     = length(y); % number of samples
+Omega = 2*pi*0.001; % sine block into motor_cmd has freq 2pi rad/sec & 0.001 sec/sample; Omega is in rad/sample
+a     = 2; % amplitude of the motor_cmd sine wave block
+
+%%
+% Your input u should be a cosine, ie, its first element should be its
+% amplitude.
+assert( abs(u(1)-a) < 1e-3 ) % roughly
+
+%% Correlation method
+% From the notes, for a fixed $\Omega \in [0,\pi]$ and given data $y(k) \in
+% R, k=1,\ldots,T$, the relationship between $y$ and the transfer function
+% $H$ is
+% 
+% $$K_\Omega := \frac{1}{T} \sum_{k=1}^T e^{-j \Omega k} y(k) = \frac{\alpha}{2} H(e^{j \Omega})$$
+
+x=exp(-i*Omega*[1:T]);
+K = 1/T*(x*y)
+H = K*2/a
+
+%%
+% That value of $H$ is one point on the bode plot. It has magnitude and
+% phase
+abs(H) % gain (unitless)
+angle(H) % phase shift (rad)
+
+%% Sanity check: Gain
+% Estimate how much the plant amplified u to y, and compare it to the gain
+% at this frequency $H(e^{j \Omega})$.
+
+figure
+subplot(2,1,1); plot(u)
+subplot(2,1,2); plot(y)
+
+%%
+% Looks like about a swing of 4 for u and 2900 for y, hence:
+2900/4
+
+%% 
+% Pretty close to abs(H).
+
+
+%% Sanity check: Phase
+% Looking at the plot, it looks like u hits a peak at sample 8000 and y
+% hits a peak at 8350. Hence the phase should something like
+- 350 * Omega % 350 samp * Omega rad/samp
+
+%%
+% Pretty close to angle(H).
+
+%%
+% Could we have done better by throwing away the initial transient?
+% Be careful to throw away starting at an index where u is at its peak
+% (still a cosine)!
+
+y = y(3000:end);
+T = length(y); 
+x=exp(-i*Omega*[1:T]);
+K = 1/T*(x*y)
+H = K*2/a
+abs(H)
+angle(H)
+
+%%
+% Not a big improvement. Our initial test was pretty long. If it had been
+% shorter, we might've gained more from tossing the initial data.
+
+##### SOURCE END #####
+--></body></html>
